@@ -1,0 +1,12 @@
+import findspark
+findspark.init()
+
+import pyspark # only run after findspark.init()
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+
+df = spark.sql('''select 'spark' as hello ''')
+df.show()
+display(df)
+
+https://medium.com/@ashish1512/how-to-setup-apache-spark-pyspark-on-jupyter-ipython-notebook-3330543ab307
