@@ -1,0 +1,14 @@
+df/covid19_india_aggregate.csv/part-00000-tid-4827878862552844640-d6471513-f64a-4570-8762-97a1970329cc-1-1-c000.csv
+
+df/covid19_india_aggregate.csv/part-00000-tid-4827878862552844640-d6471513-f64a-4570-8762-97a1970329cc-1-1-c000.csv
+
+https://dbc-1bc69654-7b17.cloud.databricks.com/?o=1303894879408522#table/hive_metastore/default/covid19_india_aggregate
+https://dbc-1bc69654-7b17.cloud.databricks.com/files/df/covid19_india_aggregate.csv/part-00000-tid-4827878862552844640-d6471513-f64a-4570-8762-97a1970329cc-1-1-c000.csv?o=1303894879408522
+
+https://westeurope.azuredatabricks.net/files/df/Sample.csv/part-00000-tid-8365188928461432060–63d7293d-3b02–43ff-b461-edd732f9e06e-4704-c000.csv?o=3847738880082577
+
+Reference: https://towardsdatascience.com/databricks-how-to-save-files-in-csv-on-your-local-computer-3d0c70e6a9ab
+
+dapib8083bd8700305dc9273b14b848abe33
+
+jdbc:spark://dbc-1bc69654-7b17.cloud.databricks.com:443/default;transportMode=http;ssl=1;httpPath=sql/protocolv1/o/1303894879408522/0826-041350-pcbzd32g;AuthMech=3;UID=token;PWD=dapib8083bd8700305dc9273b14b848abe33

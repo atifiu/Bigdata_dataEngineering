@@ -1,4 +1,5 @@
 spark notes
+notebook linkedin link: https://community.cloud.databricks.com/?o=1992180320630480#notebook/936619117327862/command/936619117327867
 
 RDD contains different types of objects and lowest level APIs
 Dataframes only contain rows
@@ -44,6 +45,11 @@ df
     .select("Country") # chooses just the 1 column
     .distinct() # removes duplicates
     .orderBy("Country") # sorts results in ascending
+	
+Streaming in Spark
+==================
+
+Achieved by using micro batches
 	
 
 # Don't change this file path
@@ -514,7 +520,8 @@ print("Number of partitions in fileRDD_part is", fileRDD_part.getNumPartitions()
 
 
 Map and Collect
-The main method by which you can manipulate data in PySpark is using map(). The map() transformation takes in a function and applies it to each element in the RDD. It can be used to do any number of things, from fetching the website associated with each URL in our collection to just squaring the numbers. In this simple exercise, you'll use map() transformation to cube each number of the numbRDD RDD that you created earlier. Next, you'll return all the elements to a variable and finally print the output.
+The main method by which you can manipulate data in PySpark is using map(). The map() transformation takes in a function and applies it to each element in the RDD. It can be used to do any number of things, from fetching the website associated with each URL in our collection to just squaring the numbers. 
+In this simple exercise, you'll use map() transformation to cube each number of the numbRDD RDD that you created earlier. Next, you'll return all the elements to a variable and finally print the output.
 
 Remember, you already have a SparkContext sc, and numbRDD available in your workspace.
 
@@ -531,7 +538,10 @@ for numb in numbers_all:
 
 
 Filter and Count
-The RDD transformation filter() returns a new RDD containing only the elements that satisfy a particular function. It is useful for filtering large datasets based on a keyword. For this exercise, you'll filter out lines containing keyword Spark from fileRDD RDD which consists of lines of text from the README.md file. Next, you'll count the total number of lines containing the keyword Spark and finally print the first 4 lines of the filtered RDD.
+The RDD transformation filter() returns a new RDD containing only the elements that satisfy a particular function. 
+It is useful for filtering large datasets based on a keyword. For this exercise, 
+you'll filter out lines containing keyword Spark from fileRDD RDD which consists of lines of text from the README.md file. 
+Next, you'll count the total number of lines containing the keyword Spark and finally print the first 4 lines of the filtered RDD.
 
 # Filter the fileRDD to select lines with Spark keyword
 fileRDD_filter = fileRDD.filter(lambda line: 'Spark' in line)
@@ -828,5 +838,264 @@ plt.show()
 Machine Learning with PySpark MLlib
 ===================================
 
+====================================================================================================================================
+Data cleaning using Pyspark
+====================================================================================================================================
+Defining a schema
+Creating a defined schema helps with data quality and import performance. As mentioned during the lesson, we'll create a simple schema to read in the following columns:
 
+Name
+Age
+City
+The Name and City columns are StringType() and the Age column is an IntegerType().
+
+# Import the pyspark.sql.types library
+#import pyspark.sql.types.*
+from pyspark.sql.types import *
+
+# Define a new schema using the StructType method
+people_schema = StructType([
+  # Define a StructField for each field
+  StructField('name', StringType(), False),
+  StructField('age', IntegerType(), False),
+  StructField('city', StringType(), False)
+])
+
+Lazy processing
+===============
+
+Using lazy processing
+Lazy processing operations will usually return in about the same amount of time regardless of the actual quantity of data. 
+Remember that this is due to Spark not performing any transformations until an action is requested.
+
+For this exercise, we'll be defining a Data Frame (aa_dfw_df) and add a couple transformations. 
+Note the amount of time required for the transformations to complete when defined vs when the data is actually queried. 
+These differences may be short, but they will be noticeable. 
+When working with a full Spark cluster with larger quantities of data the difference will be more apparent.
+
+# Load the CSV file
+aa_dfw_df = spark.read.format('csv').options(Header=True).load('AA_DFW_2018.csv.gz')
+
+# Add the airport column using the F.lower() method
+aa_dfw_df = aa_dfw_df.withColumn('airport', F.lower(aa_dfw_df['Destination Airport']))
+
+# Drop the Destination Airport column
+aa_dfw_df = aa_dfw_df.drop(aa_dfw_df['Destination Airport'])
+
+# Show the DataFrame
+aa_dfw_df.show()
+
+=================================================================================================================================================
+
+Saving a DataFrame in Parquet format
+When working with Spark, you'll often start with CSV, JSON, or other data sources. This provides a lot of flexibility for the types of data to load, but it is not an optimal format for Spark. The Parquet format is a columnar data store, allowing Spark to use predicate pushdown. This means Spark will only process the data necessary to complete the operations you define versus reading the entire dataset. This gives Spark more flexibility in accessing the data and often drastically improves performance on large datasets.
+
+In this exercise, we're going to practice creating a new Parquet file and then process some data from it.
+
+# View the row count of df1 and df2
+print("df1 Count: %d" % df1.count())
+print("df2 Count: %d" % df2.count())
+
+# Combine the DataFrames into one
+df3 = df1.union(df2)
+
+# Save the df3 DataFrame in Parquet format
+df3.write.parquet('AA_DFW_ALL.parquet', mode='overwrite')
+
+# Read the Parquet file into a new DataFrame and run a count
+print(spark.read.parquet('AA_DFW_ALL.parquet').count())
+
+==================================================================================================================================================
+
+SQL and Parquet
+Parquet files are perfect as a backing data store for SQL queries in Spark. While it is possible to run the same queries directly via Spark's Python functions, sometimes it's easier to run SQL queries alongside the Python options.
+
+For this example, we're going to read in the Parquet file we created in the last exercise and register it as a SQL table. Once registered, we'll run a quick query against the table (aka, the Parquet file).
+
+# Read the Parquet file into flights_df
+flights_df = spark.read.parquet("AA_DFW_ALL.parquet")
+
+# Register the temp table
+flights_df.createOrReplaceTempView('flights')
+
+# Run a SQL query of the average flight duration
+avg_duration = spark.sql('SELECT avg(flight_duration) from flights').collect()[0]
+print('The average flight time is: %d' % avg_duration)
+
+==================================================================================================================================================
+
+Filtering column content with Python
+=======================================
+
+You've looked at using various operations on DataFrame columns - now you can modify a real dataset. The DataFrame voter_df contains information regarding the voters on the Dallas City Council from the past few years. This truncated DataFrame contains the date of the vote being cast and the name and position of the voter. Your manager has asked you to clean this data so it can later be integrated into some desired reports. The primary task is to remove any null entries or odd characters and return a specific set of voters where you can validate their information.
+
+This is often one of the first steps in data cleaning - removing anything that is obviously outside the format. For this dataset, make sure to look at the original data and see what looks out of place for the VOTER_NAME column.
+
+The pyspark.sql.functions library is already imported under the alias F.
+
+============================================================================
+
+# Show the distinct VOTER_NAME entries
+voter_df.select(voter_df.VOTER_NAME).distinct().show(40, truncate=False)
+
+# Filter voter_df where the VOTER_NAME is 1-20 characters in length
+voter_df = voter_df.filter('length(VOTER_NAME) > 0 and length(VOTER_NAME) < 20')
+
+# Filter out voter_df where the VOTER_NAME contains an underscore
+voter_df = voter_df.filter(~ F.col('VOTER_NAME').contains('_'))
+
+# Show the distinct VOTER_NAME entries again
+voter_df.select(voter_df.VOTER_NAME).distinct().show(40, truncate=False)
+
+============================================================================
+
+
+Modifying DataFrame columns
+Previously, you filtered out any rows that didn't conform to something generally resembling a name. Now based on your earlier work, your manager has asked you to create two new columns - first_name and last_name. She asks you to split the VOTER_NAME column into words on any space character. You'll treat the last word as the last_name, and all other words as the first_name. You'll be using some new functions in this exercise including .split(), .size(), and .getItem(). The .getItem(index) takes an integer value to return the appropriately numbered item in the column. The functions .split() and .size() are in the pyspark.sql.functions library.
+
+Please note that these operations are always somewhat specific to the use case. Having your data conform to a format often matters more than the specific details of the format. Rarely is a data cleaning task meant just for one person - matching a defined format allows for easier sharing of the data later (ie, Paul doesn't need to worry about names - Mary already cleaned the dataset).
+
+The filtered voter DataFrame from your previous exercise is available as voter_df. The pyspark.sql.functions library is available under the alias F.
+
+
+# Add a new column called splits separated on whitespace
+voter_df = voter_df.withColumn("splits", F.split(voter_df.VOTER_NAME, '\s+'))
+
+# Create a new column called first_name based on the first item in splits
+voter_df = voter_df.withColumn("first_name", voter_df.splits.getItem(0))
+
+# Get the last entry of the splits list and create a column called last_name
+voter_df = voter_df.withColumn("last_name", voter_df.splits.getItem(F.size('splits') - 1))
+
+# Drop the splits column
+voter_df = voter_df.drop('splits')
+
+# Show the voter_df DataFrame
+voter_df.show()
+
+==============================================================================================================================================
+
+When conditional statements
+
+when() example
+The when() clause lets you conditionally modify a Data Frame based on its content. You'll want to modify our voter_df DataFrame to add a random number to any voting member that is defined as a "Councilmember".
+
+The voter_df DataFrame is defined and available to you. The pyspark.sql.functions library is available as F. You can use F.rand() to generate the random value.
+
+# Add a column to voter_df for any voter with the title **Councilmember**
+voter_df = voter_df.withColumn('random_val',
+                               F.when(voter_df.TITLE == "Councilmember", F.rand()))
+
+# Show some of the DataFrame rows, noting whether the when clause worked
+voter_df.show()
+
+When / Otherwise
+This requirement is similar to the last, but now you want to add multiple values based on the voter's position. Modify your voter_df DataFrame to add a random number to any voting member that is defined as a Councilmember. Use 2 for the Mayor and 0 for anything other position.
+
+The voter_df Data Frame is defined and available to you. The pyspark.sql.functions library is available as F. You can use F.rand() to generate the random value.
+
+# Add a column to voter_df for a voter based on their position
+voter_df = voter_df.withColumn('random_val',
+                               when(voter_df.TITLE == 'Councilmember', F.rand())
+                               .when(voter_df.TITLE == "Mayor", 2)
+                               .otherwise(0))
+
+# Show some of the DataFrame rows
+voter_df.show()
+
+# Use the .filter() clause with random_val
+voter_df.filter(voter_df.random_val == 0).show()
+
+==============================================================================================================================================
+
+
+
+Using user defined functions in Spark
+You've seen some of the power behind Spark's built-in string functions when it comes to manipulating DataFrames. However, once you reach a certain point, it becomes difficult to process the data in a without creating a rat's nest of function calls. Here's one place where you can use User Defined Functions to manipulate our DataFrames.
+
+For this exercise, we'll use our voter_df DataFrame, but you're going to replace the first_name column with the first and middle names.
+
+The pyspark.sql.functions library is available under the alias F. The classes from pyspark.sql.types are already imported.
+
+def getFirstAndMiddle(names):
+  # Return a space separated string of names
+  #names.split(" ")
+  return ' '.join(names)
+
+# Define the method as a UDF
+udfFirstAndMiddle = F.udf(getFirstAndMiddle, StringType())
+
+# Create a new column using your UDF
+voter_df = voter_df.withColumn('first_and_middle_name', udfFirstAndMiddle(voter_df.splits))
+
+# Show the DataFrame
+voter_df.show()
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Spark Notes:
+
+Reference: https://medium.com/towards-data-science/optimizing-output-file-size-in-apache-spark-5ce28784934c
+Files processed by Spark should not be smaller than 128mb which is default file size processed by Spark or it should be in multiple of 128mb.
+So, when writing to iceberg table make sure file size is equal to 128mb or in multiple of 128mb for good read performance.
+
+The number of output files saved to the disk is equal to the number of partitions in the Spark executors when the write operation is performed
+
+Test reading time from both Trino as well as Spark.
+
+--------------------------------------------------------------
+Reading data in spark
+https://towardsdatascience.com/spark-essentials-how-to-read-and-write-data-with-pyspark-5c45e29227cd
+======================================================================================================================
+How are the initial number of partitions are determined in PySpark?
+link: https://www.linkedin.com/pulse/how-initial-number-partitions-determined-pyspark-sugumar-srinivasan%3FtrackingId=ZMLxheRFSe6%252FrGJnj0ys5w%253D%253D/?trackingId=ZMLxheRFSe6%2FrGJnj0ys5w%3D%3D
+
+Ideally defaultParallelism can be determined by multiplying number of executor instances and number of cpu cores given per 
+instance.defaultParallelism = (spark.executor.instances * spark.executor.cores)
+
+To check the default parallelism that we get for the spark job, run the below line in either in spark-shell or jupyter notebook.
+spark.sparkContext.defaultParallelism
+
+Ideally partitions will be created based on 'maxPartitionBytes' that we set(By default it is '134217728b' 128MB). 
+In some cases, Like we have more resources but we have less partitions, in such cases spark decides the partitions size 
+based on the below logic so that resource will get utilised properly.No of Partitions = min(128MB, (File Size in MB/defaultParallelism))
+
+number of max partitions spark can support depends on defaultParallelism, so if total size of data to be processed / maxpartitionbytes is greater 
+than defaultParallelism then defaultParallelism number of partitions will be processed parallely but in case total it is less than defaultParallelism
+then spark will create data partitions i.e. smaller size partitions so that data partitions are equal or more than defaultParallelism.
+======================================================================================================================
+Spark Notes from Percipio course on Spark
+======================================================================================================================
+Refernce notebook E:\spark_hive\learning_pyspark_rdd_basic.ipynb
+Spark creates stages which is pysical execution plan
+Stages are divided into tasks which is operation on data partitions
+
+spark session on driver program i.e. master node interacts with spark context which sens the request to
+cluster manager i.e. YARN/MESOS
+spark_rdd = sc.paralleize([1, 2, 3]) where sc = sparkContext
+this will create spark rdd
+
+to convert rdd to dataframe we need two dimensional RDD
+
+spark_rdd = sc.paralleize([[1,2,3],
+						   [4,5,6]])
+						   
+spark_rdd.count() --- 2
+
+collect() function will display the entire RDD/DF
+==================================================================================================================
+
+Number of Jobs = Number of Actions
+Number of Stages = Number of Wide Transformation +1
+Number of Tasks = Number of Partitions
+
+narrow vs wide transformations
+https://www.linkedin.com/pulse/narrow-wide-transformations-jayson-ruzario/
+
+==================================================================================================================
+Bucketing in Spark
+https://www.youtube.com/watch?v=1kWl6d1yeKA
+
+hash(bucketed_columns)%number_of_buckets
+bucketing on high cardinality columns
 

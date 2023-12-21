@@ -81,7 +81,7 @@ select title, colors[0], screen_size[0] from laptops;
 ## The Map Data Type
 
 # droping laptops table
-drop table laptops;
+drop table if exists laptops;
 
 # creating table laptops 
 create table laptops (

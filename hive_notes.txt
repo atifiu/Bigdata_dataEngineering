@@ -1,0 +1,33 @@
+hive  ---to connect to hive cli
+show databases;
+
+beeline -u jdbc:hive2://
+beeline -u jdbc:hive2:// \
+-e "use university; select * from students"
+
+beeline -u jdbc:hive2:// \
+-f "students_queries.hql"
+
+Managed tables vs external tables
+
+In managed tables, data is fully managed by hive. Hive owns the file and directories. Delting the tabler will delete file and metdata
+External tables are shared by Hadoop and Hadoop ecosystem such as spark. deleting the table will only delete metadata but file data will reside in hadoop
+
+create table if not exists scorecards
+
+hadoop fs -ls /user/hive/warehouse to explote hadoop filesystem where fs is filesystem from command line
+
+Number of files in hadoop table is equal to number of insert statements
+
+hadoop fs -ls /user/hive/warehouse --hive metastore
+
+# make a directory and named it as data
+hadoop fs -mkdir /data
+
+# copy the csv file that we have created in to this folder
+hadoop fs -copyFromLocal courses.csv /data/
+
+# if we access in to the data folder we will see courses.csv file is there
+hadoop fs -ls /data/
+
+describe formatted table_name to check if table is managed or external
